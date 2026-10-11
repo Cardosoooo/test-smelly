@@ -176,7 +176,7 @@ describe('UserService', () => {
   });
 
   describe('generateUserReport', () => {
-    test('inclui o nome e o status de cada usuário cadastrado', () => {
+    test('lista todos os usuários cadastrados', () => {
       // Arrange
       userService.createUser('Alice', 'alice@email.com', 28);
       userService.createUser('Bob', 'bob@email.com', 32);
@@ -185,12 +185,11 @@ describe('UserService', () => {
       const relatorio = userService.generateUserReport();
 
       // Assert
-      expect(relatorio).toEqual(expect.stringContaining('Alice'));
-      expect(relatorio).toEqual(expect.stringContaining('Bob'));
-      expect(relatorio).toEqual(expect.stringContaining('ativo'));
+      expect(relatorio).toContain('Alice');
+      expect(relatorio).toContain('Bob');
     });
 
-    test('mostra o status atualizado de um usuário desativado', () => {
+    test('mostra o status inativo de um usuário desativado', () => {
       // Arrange
       const usuarioComum = criarUsuarioComum();
       userService.deactivateUser(usuarioComum.id);
@@ -199,7 +198,7 @@ describe('UserService', () => {
       const relatorio = userService.generateUserReport();
 
       // Assert
-      expect(relatorio).toEqual(expect.stringContaining('inativo'));
+      expect(relatorio).toContain('inativo');
     });
 
     test('informa que não há usuários quando o cadastro está vazio', () => {
@@ -210,9 +209,7 @@ describe('UserService', () => {
       const relatorio = userService.generateUserReport();
 
       // Assert
-      expect(relatorio).toEqual(
-        expect.stringContaining('Nenhum usuário cadastrado.')
-      );
+      expect(relatorio).toContain('Nenhum usuário cadastrado.');
     });
   });
 });

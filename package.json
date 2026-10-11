@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "jest",
+    "lint": "eslint .",
     "coverage": "jest --coverage"
   },
   "devDependencies": {

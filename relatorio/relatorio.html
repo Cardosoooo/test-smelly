@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Refatoração de Testes e Detecção de Test Smells</title>
+<meta name="author" content="Gabriel Cardoso dos Santos">
+<style>
+  @page {
+    size: A4;
+    margin: 1.8cm 2cm 1.6cm 2cm;
+    @bottom-right { content: counter(page); font: 9pt Calibri, Arial, sans-serif; color: #555; }
+  }
+  @page :first { @bottom-right { content: none; } }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Calibri, Carlito, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.3;
+    color: #111;
+    text-align: justify;
+    hyphens: auto;
+  }
+  p { margin: 0 0 5pt; }
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 9.5pt;
+    background: #f1f3f5;
+    padding: 0 2px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .capa {
+    height: 25.6cm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    page-break-after: always;
+  }
+  .capa .topo { font-size: 13pt; line-height: 1.5; }
+  .capa .topo strong { font-size: 14pt; }
+  .capa h1 { font-size: 22pt; margin: 0 0 10pt; line-height: 1.2; }
+  .capa .sub { font-size: 12pt; color: #333; }
+  .capa .autor { font-size: 13pt; line-height: 1.6; }
+  .capa .data { font-size: 12pt; }
+
+  h2 { font-size: 13pt; margin: 10pt 0 4pt; break-after: avoid; }
+  h3 { font-size: 11pt; margin: 7pt 0 2pt; break-after: avoid; }
+  h2:first-of-type { margin-top: 0; }
+  .campo { font-weight: bold; }
+
+  ul, ol { margin: 0 0 6pt; padding-left: 18pt; }
+  li { margin-bottom: 2pt; }
+
+  .rotulo { font-size: 10pt; font-weight: bold; margin: 7pt 0 2pt; text-align: left; break-after: avoid; }
+  .url { white-space: nowrap; hyphens: none; }
+  pre.codigo {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 7.5pt;
+    line-height: 1.22;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 5px 8px 5px 4px;
+    margin: 0 0 6pt;
+    white-space: pre;
+    text-align: left;
+    break-inside: avoid;
+  }
+  pre.codigo .linha { display: block; }
+  pre.codigo .linha.marca { background: #ffe1e1; }
+  pre.codigo .ln { display: inline-block; width: 2.3em; padding-right: 0.9em; text-align: right; color: #8c959f; }
+  pre.codigo .c { color: #6a737d; font-style: italic; }
+  pre.codigo .s { color: #0a3069; }
+  pre.codigo .k { color: #cf222e; }
+  pre.codigo .n { color: #0550ae; }
+
+  figure { margin: 5pt 0 6pt; text-align: center; break-inside: avoid; }
+  figure img { width: 12cm; border: 1px solid #bbb; }
+  figcaption { font-size: 9pt; color: #333; margin-top: 3pt; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin: 3pt 0 6pt; text-align: left; break-inside: avoid; }
+  th, td { border: 1px solid #c8ccd0; padding: 3pt 6pt; vertical-align: top; }
+  th { background: #eef1f4; }
+  .legenda { font-size: 9pt; color: #333; margin: 6pt 0 2pt; text-align: left; }
+  .detecta { color: #1a7f37; font-weight: bold; }
+  .falha { color: #b42318; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<section class="capa">
+  <div class="topo">
+    <strong>Pontifícia Universidade Católica de Minas Gerais</strong><br>
+    Curso de Engenharia de Software<br>
+    Disciplina: Teste de Software
+  </div>
+  <div>
+    <h1>Refatoração de Testes e Detecção de Test Smells</h1>
+    <div class="sub">Análise e refatoração da suíte de testes do projeto test-smelly com ESLint e eslint-plugin-jest</div>
+  </div>
+  <div class="autor">
+    Aluno: Gabriel Cardoso dos Santos<br>
+    Matrícula: 830691<br>
+    Professor: Cleiton Tavares
+  </div>
+  <div class="data">Outubro de 2026</div>
+</section>
+
+<h2>1. Introdução</h2>
+<p>Este relatório descreve a análise e a refatoração da suíte de testes do projeto <em>test-smelly</em>, um serviço de gerenciamento de usuários escrito com test smells de propósito. Os testes refatorados estão em <code>test/userService.clean.test.js</code>; o original não foi alterado.</p>
+<p><span class="campo">Repositório:</span> <span class="url">https://github.com/Cardosoooo/test-smelly</span></p>
+
+<h2>2. Análise de Smells</h2>
+<p>Na leitura de <code>test/userService.smelly.test.js</code> encontrei cinco smells; os três mais graves estão abaixo. Para confirmar os riscos, introduzi defeitos de propósito em <code>src/userService.js</code>, um de cada vez, e observei quais testes falhavam (Tabela 1).</p>
+
+<h3>2.1 Lógica Condicional no Teste (Conditional Test Logic)</h3>
+<p><span class="campo">Onde:</span> “deve desativar usuários se eles não forem administradores” (linhas 33 a 52). <span class="campo">Por que é um smell:</span> o teste percorre uma lista com <code>for</code> e usa <code>if/else</code> para escolher qual <code>expect</code> executar. Um bom teste tem um caminho só; aqui é preciso simular o laço para saber o que está sendo verificado.</p>
+<p><span class="campo">Risco:</span> a condição usa <code>user.isAdmin</code>, um valor produzido pelo próprio código testado, ou seja, o teste pergunta ao sistema o que deve esperar. Quando fiz o <code>createUser</code> ignorar o parâmetro <code>isAdmin</code>, o administrador passou a ser tratado como usuário comum, caiu no <code>if</code>, foi desativado e o teste continuou passando.</p>
+
+<h3>2.2 Tratamento de Exceção no Teste (asserção dentro do catch)</h3>
+<p><span class="campo">Onde:</span> “deve falhar ao criar usuário menor de idade” (linhas 66 a 75). <span class="campo">Por que é um smell:</span> o único <code>expect</code> está dentro do <code>catch</code>. Se a exceção não for lançada, nenhuma asserção roda e o Jest aprova o teste.</p>
+<p><span class="campo">Risco:</span> falso positivo. Removi a validação de idade (<code>if (idade &lt; 18)</code>) e o teste continuou verde, embora a regra de negócio tivesse deixado de existir. É o mesmo caso dos mutantes sobreviventes do trabalho anterior: a linha está coberta, mas a regra não está protegida.</p>
+
+<h3>2.3 Teste Ansioso (Eager Test)</h3>
+<p><span class="campo">Onde:</span> “deve criar e buscar um usuário corretamente” (linhas 18 a 31). <span class="campo">Por que é um smell:</span> um único teste exercita dois comportamentos, <code>createUser</code> e <code>getUserById</code>, com duas ações e as asserções das duas misturadas. O “e” no nome já denuncia isso.</p>
+<p><span class="campo">Risco:</span> quando o teste falha, o nome não diz qual método quebrou, e o primeiro <code>expect</code> que falha esconde o resultado dos seguintes. As verificações também ficam rasas: o id só é checado com <code>toBeDefined</code>, e e-mail e idade nunca são conferidos.</p>
+
+<p><span class="campo">Outros smells encontrados:</span> <strong>Teste Frágil</strong>, no teste do relatório, que compara a linha exata (<code>ID: ..., Nome: ..., Status: ...</code>) e quebrou quando mudei só a pontuação, sem mudar nenhum dado; e <strong>Teste Ignorado e Vazio</strong>, o <code>test.skip</code> com corpo vazio e um TODO, que deixa o caso da lista vazia sem teste.</p>
+
+<div class="legenda"><strong>Tabela 1.</strong> Mudanças feitas de propósito em <code>src/userService.js</code>, uma por vez, e o efeito em cada suíte.</div>
+<table>
+  <tr><th>Mudança no código</th><th>Suíte original (smelly)</th><th>Suíte refatorada (clean)</th></tr>
+  <tr><td><code>createUser</code> ignora o parâmetro <code>isAdmin</code></td><td class="falha">passa: defeito não detectado</td><td class="detecta">2 testes falham</td></tr>
+  <tr><td>Validação de idade removida</td><td class="falha">passa: defeito não detectado</td><td class="detecta">1 teste falha</td></tr>
+  <tr><td>Só a pontuação do relatório muda (não é defeito)</td><td class="falha">1 teste falha: alarme falso</td><td class="detecta">passa</td></tr>
+</table>
+
+<h2>3. Processo de Refatoração</h2>
+<p>Escolhi o teste de desativação, o mais problemático da suíte: ele concentra três dos quatro erros apontados pelo ESLint e, como visto em 2.1, não detecta um defeito real.</p>
+
+<div class="rotulo">Antes (userService.smelly.test.js). Em destaque: laço, condicionais e as asserções apontadas pelo ESLint.</div>
+<pre class="codigo" data-inicio="33" data-marca="40,42,44,46,47,49">  test('deve desativar usuários se eles não forem administradores', () => {
+    const usuarioComum = userService.createUser('Comum', 'comum@teste.com', 30);
+    const usuarioAdmin = userService.createUser('Admin', 'admin@teste.com', 40, true);
+
+    const todosOsUsuarios = [usuarioComum, usuarioAdmin];
+
+    // O teste tem um loop e um if, tornando-o complexo e menos claro.
+    for (const user of todosOsUsuarios) {
+      const resultado = userService.deactivateUser(user.id);
+      if (!user.isAdmin) {
+        // Este expect só roda para o usuário comum.
+        expect(resultado).toBe(true);
+        const usuarioAtualizado = userService.getUserById(user.id);
+        expect(usuarioAtualizado.status).toBe('inativo');
+      } else {
+        // E este só roda para o admin.
+        expect(resultado).toBe(false);
+      }
+    }
+  });</pre>
+
+<div class="rotulo">Depois (userService.clean.test.js). Os três testes que substituem os dois ramos do original; o bloco <code>deactivateUser</code> tem mais dois (item 4).</div>
+<pre class="codigo" data-inicio="122">    test('retorna true ao desativar um usuário comum', () => {
+      // Arrange
+      const usuarioComum = criarUsuarioComum();
+
+      // Act
+      const resultado = userService.deactivateUser(usuarioComum.id);
+
+      // Assert
+      expect(resultado).toBe(true);
+    });
+
+    test('muda o status do usuário comum para inativo', () => {
+      // Arrange
+      const usuarioComum = criarUsuarioComum();
+
+      // Act
+      userService.deactivateUser(usuarioComum.id);
+
+      // Assert
+      expect(userService.getUserById(usuarioComum.id).status).toBe('inativo');
+    });
+
+    test('retorna false ao tentar desativar um administrador', () => {
+      // Arrange
+      const usuarioAdmin = criarUsuarioAdmin();
+
+      // Act
+      const resultado = userService.deactivateUser(usuarioAdmin.id);
+
+      // Assert
+      expect(resultado).toBe(false);
+    });</pre>
+
+<p><strong>Decisões tomadas:</strong></p>
+<ol>
+  <li><strong>Um cenário por teste, sem <code>for</code> nem <code>if</code>.</strong> Usuário comum e administrador viraram testes separados, com o resultado esperado escrito no próprio teste (<code>true</code> ou <code>false</code>). O teste não pergunta mais ao sistema o que esperar, e o defeito do <code>isAdmin</code> passou a ser detectado.</li>
+  <li><strong>Um comportamento por teste.</strong> O retorno de <code>deactivateUser</code> e a mudança de status ficaram em testes diferentes, com nomes que dizem o que é verificado. Se um falhar, o nome já mostra o que quebrou.</li>
+  <li><strong>AAA explícito e só o essencial no teste.</strong> Cada teste tem Arrange, Act e Assert separados, com uma única ação no Act. Os helpers <code>criarUsuarioComum()</code> e <code>criarUsuarioAdmin()</code> escondem nome, e-mail e idade, que não importam aqui.</li>
+  <li><strong>Casos que faltavam.</strong> O original nunca conferia que o administrador continua ativo, nem o retorno para um id inexistente. Os dois ganharam testes.</li>
+</ol>
+<p>Nos outros smells, o Teste Ansioso virou testes separados de <code>createUser</code> e <code>getUserById</code>; o <code>try/catch</code> virou <code>expect(() =&gt; ...).toThrow('O usuário deve ser maior de idade.')</code>, que falha se a exceção não vier; o teste do relatório passou a verificar só que os nomes e o status aparecem, sem depender da pontuação; e o teste ignorado foi implementado. Ao todo, os quatro testes originais, mais o ignorado, viraram 15 testes curtos.</p>
+
+
+<h2>4. Relatório da Ferramenta</h2>
+<p>Configurei o ESLint com o <code>.eslintrc.json</code> do enunciado, na versão 8.57, porque o ESLint 9 ignora esse formato de configuração. Também criei um <code>.eslintignore</code> para não analisar a pasta <code>coverage/</code>. A Figura 1 mostra a primeira execução, antes de criar o arquivo limpo.</p>
+
+<figure>
+  <img src="img/eslint-primeira-execucao.png" alt="Saída do ESLint na primeira execução">
+  <figcaption><strong>Figura 1.</strong> Primeira execução do <code>npx eslint .</code>: 4 erros e 2 avisos no arquivo smelly.</figcaption>
+</figure>
+
+<p>Os apontamentos batem com a análise manual. As linhas 44, 46 e 49 (<code>jest/no-conditional-expect</code>) são os <code>expect</code> dentro do <code>if/else</code> (2.1). A linha 73, com a mesma regra, é o <code>expect</code> dentro do <code>catch</code> (2.2), já que o <code>catch</code> também é um caminho que pode não rodar. A linha 77 é o <code>test.skip</code> vazio, com dois avisos: <code>jest/no-disabled-tests</code> e <code>jest/expect-expect</code>. Este último vem do <code>plugin:jest/recommended</code>, e não das regras extras do enunciado.</p>
+<p>Em um segundo, a ferramenta achou, com arquivo e linha, três dos cinco smells da leitura manual, e pode rodar a cada commit ou no CI para impedir que eles voltem. Ela não apontou o Teste Ansioso nem o Teste Frágil, que dependem de entender a intenção do teste; para esses, a revisão manual continua necessária. Depois da refatoração, o ESLint não aponta nada no arquivo novo e a suíte completa passa (Figura 2). O único teste ignorado é o do arquivo original, que não foi alterado.</p>
+
+<figure>
+  <img src="img/validacao-final.png" alt="ESLint sem apontamentos no arquivo limpo e npm test passando">
+  <figcaption><strong>Figura 2.</strong> Validação final: ESLint sem apontamentos no arquivo limpo e <code>npm test</code> com 19 testes aprovados.</figcaption>
+</figure>
+
+<h2>5. Conclusão</h2>
+<p>A suíte original passava inteira, mas deixava defeitos reais passarem e quebrava com uma mudança que não era defeito: teste verde, sozinho, não garante nada. Testes limpos, com um comportamento por teste, padrão AAA, sem lógica condicional e verificando comportamento em vez de formato, fazem cada falha apontar para um problema concreto e servem como documentação do sistema. A análise estática complementa esse cuidado, transformando parte das boas práticas em regra automática, que roda sempre e não depende da atenção de quem revisa. Juntas, as duas práticas deixam os testes mais baratos de manter e dão confiança para mudar o código, o que sustenta o projeto ao longo do tempo.</p>
+
+<script>
+  // Numera, destaca e colore os trechos de código
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const token = /(\/\/.*$)|('(?:[^'\\]|\\.)*')|\b(const|let|for|of|if|else|return|true|false|null)\b|\b(\d+)\b/g;
+  const colorir = (linha) => {
+    let saida = '';
+    let ultimo = 0;
+    for (const m of linha.matchAll(token)) {
+      const classe = m[1] ? 'c' : m[2] ? 's' : m[3] ? 'k' : 'n';
+      saida += esc(linha.slice(ultimo, m.index)) + `<span class="${classe}">${esc(m[0])}</span>`;
+      ultimo = m.index + m[0].length;
+    }
+    return saida + esc(linha.slice(ultimo));
+  };
+  document.querySelectorAll('pre.codigo').forEach((pre) => {
+    const linhas = pre.textContent.replace(/\n$/, '').split('\n');
+    const recuo = Math.min(...linhas.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length));
+    const inicio = Number(pre.dataset.inicio);
+    const marcadas = (pre.dataset.marca || '').split(',').map(Number);
+    pre.innerHTML = linhas.map((l, i) => {
+      const numero = inicio + i;
+      const classe = marcadas.includes(numero) ? 'linha marca' : 'linha';
+      return `<span class="${classe}"><span class="ln">${numero}</span>${colorir(l.slice(recuo)) || ' '}</span>`;
+    }).join('');
+  });
+</script>
+</body>
+</html>

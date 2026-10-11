@@ -28,3 +28,34 @@ Siga os passos abaixo para preparar seu ambiente de trabalho.
 git clone [URL_DO_SEU_FORK_DO_REPOSITORIO]
 cd test-smelly
 ```
+
+## Entrega
+
+Trabalho de Gabriel Cardoso dos Santos (matrícula 830691).
+
+| O que | Onde |
+|---|---|
+| Testes refatorados | [`test/userService.clean.test.js`](test/userService.clean.test.js) |
+| Suíte original, sem alterações | [`test/userService.smelly.test.js`](test/userService.smelly.test.js) |
+| Configuração do ESLint | [`.eslintrc.json`](.eslintrc.json) |
+| Relatório (PDF) | [`relatorio/Relatorio_Test_Smells_Gabriel_Cardoso.pdf`](relatorio/Relatorio_Test_Smells_Gabriel_Cardoso.pdf) |
+
+Os testes ficam na pasta `test/`, que é a pasta usada neste repositório (e não `__tests__/`).
+
+### Como rodar
+
+```bash
+npm install
+npm test
+npx eslint .
+```
+
+O `npm test` roda as duas suítes: 19 testes passam e 1 é ignorado (o `test.skip` do arquivo original).
+
+O `npx eslint .` (ou `npm run lint`) aponta 4 erros e 2 avisos, todos no arquivo smelly, que foi mantido como estava. O arquivo clean não tem nenhum apontamento:
+
+```bash
+npx eslint test/userService.clean.test.js
+```
+
+O projeto usa o ESLint 8, porque o ESLint 9 não lê o `.eslintrc.json` pedido no enunciado.
